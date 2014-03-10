@@ -19,9 +19,9 @@ namespace Schedule.Repositories
         public string ConnectionString { get; set; }
 
         #region Global
-        public ScheduleRepository(string connectionString = "Name=ScheduleConnection")
+        public ScheduleRepository(string connectionString)
         {
-            Database.SetInitializer(new MigrateDatabaseToLatestVersion<ScheduleContext, Configuration>());
+            //Database.SetInitializer(new MigrateDatabaseToLatestVersion<ScheduleContext, Configuration>());
 
             ConnectionString = connectionString;
         }

@@ -9,7 +9,7 @@ namespace Schedule.DataLayer
     public class ScheduleContext : DbContext
     {
         public ScheduleContext()
-            : base("Name=ScheduleConnection")
+            : base()
         {
         }
 
