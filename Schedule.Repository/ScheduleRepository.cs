@@ -11,6 +11,8 @@ using Schedule.DomainClasses.Logs;
 using Calendar = Schedule.DomainClasses.Main.Calendar;
 using System.IO;
 using System.Data.Entity.Infrastructure;
+using System.Data.SqlClient;
+using System.Data;
 
 namespace Schedule.Repositories
 {
@@ -31,6 +33,17 @@ namespace Schedule.Repositories
             ConnectionString = connectionString;
         }
 
+        public void CreateDB()
+        {
+            using (var context = new ScheduleContext(ConnectionString))
+            {
+                if (!context.Database.Exists())
+                {
+                    ((IObjectContextAdapter)context).ObjectContext.CreateDatabase();
+                }
+            }
+        }
+
         public void RecreateDB()
         {
             using (var context = new ScheduleContext(ConnectionString))
@@ -40,15 +53,58 @@ namespace Schedule.Repositories
             }
         }
 
-        public void CreateDB()
-        {   
-            using (var context = new ScheduleContext(ConnectionString))
+        public string ExtractDBName(string connectionString)
+        {
+            int startIndex = connectionString.IndexOf("Database=") + 9;
+
+            if (startIndex == -1)
             {
-                if (!context.Database.Exists())
-                {
-                    ((IObjectContextAdapter)context).ObjectContext.CreateDatabase();
-                }
+                return "";
             }
+
+            int endIndex = -1;
+            if (startIndex != 0)
+            {
+                endIndex = connectionString.IndexOf(';', startIndex);
+            }
+
+            return connectionString.Substring(startIndex, endIndex - startIndex);
+        }
+
+        public void BackupDB(string filename)
+        {
+            var dbName = ExtractDBName(this.ConnectionString);
+
+            if (dbName == "")
+            {
+                return;
+            }
+
+            var backupSQL = "BACKUP DATABASE " + dbName + " TO DISK = '" + filename + "' WITH FORMAT, MEDIANAME='" + dbName + "'";
+
+            ExecuteQuery(backupSQL);
+        }
+
+        public void RestoreDB(string filename)
+        {
+            var restoreSQL = "use master; RESTORE DATABASE ScheduleDB FROM DISK = '" + filename + "' WITH REPLACE";
+            ExecuteQuery(restoreSQL);
+        }
+
+        private void ExecuteQuery(string restoreSQL)
+        {
+            SqlConnection sqlConnection1 = new SqlConnection(ConnectionString);
+            SqlCommand cmd = new SqlCommand();
+
+            cmd.CommandText = restoreSQL;
+            cmd.CommandType = CommandType.Text;
+            cmd.Connection = sqlConnection1;
+
+            sqlConnection1.Open();
+
+            cmd.ExecuteNonQuery();
+
+            sqlConnection1.Close();
         }
 
         public void cloneDB(ScheduleRepository scheduleRepository)
@@ -2776,6 +2832,6 @@ namespace Schedule.Repositories
                 return context.Lessons.Count(l => l.IsActive && l.TeacherForDiscipline.TeacherForDisciplineId == tfdId) * 2;
             }
         }
-        #endregion        
+        #endregion
     }
 }
