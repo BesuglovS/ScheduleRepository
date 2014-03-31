@@ -1247,7 +1247,7 @@ namespace Schedule.Repositories
             }
         }
 
-        public Dictionary<string, Dictionary<int, Tuple<string, List<Lesson>>>> GetGroupedGroupLessons(int groupId, DateTime semesterStarts)
+        public Dictionary<string, Dictionary<int, Tuple<string, List<Lesson>>>> GetGroupedGroupLessons(int groupId, DateTime semesterStarts, int weekfilter = -1)
         {
             using (var context = new ScheduleContext(ConnectionString))
             {
@@ -1271,6 +1271,13 @@ namespace Schedule.Repositories
                     .Include(l => l.Auditorium)
                     .Where(l => groupsListIds.Contains(l.TeacherForDiscipline.Discipline.StudentGroup.StudentGroupId) && l.IsActive)
                     .ToList();
+
+                if (weekfilter != -1)
+                {
+                    primaryList = primaryList
+                        .Where(l => CalculateWeekNumber(l.Calendar.Date) == weekfilter)
+                        .ToList();
+                }
 
                 var groupedLessons = primaryList.GroupBy(l => Constants.Constants.DOWRemap[(int)(l.Calendar.Date).DayOfWeek] * 2000 +
                     l.Ring.Time.Hour * 60 + l.Ring.Time.Minute,
