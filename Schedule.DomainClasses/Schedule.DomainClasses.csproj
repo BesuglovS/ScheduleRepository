@@ -63,6 +63,8 @@
     <Compile Include="Main\StudentsInGroups.cs" />
     <Compile Include="Main\Teacher.cs" />
     <Compile Include="Main\TeacherForDiscipline.cs" />
+    <Compile Include="Session\Exam.cs" />
+    <Compile Include="Session\LogEvent.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

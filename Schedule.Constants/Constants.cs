@@ -6,6 +6,8 @@ namespace Schedule.Constants
     public static class Constants
     {
 
+        public static DateTime DefaultEmptyDateForEvent = new DateTime(2020, 1, 1);
+
         public static Dictionary<int, int> DOWRemap = new Dictionary<int, int> 
         { { 0, 7 }, { 1, 1 }, { 2, 2 }, { 3, 3 }, { 4, 4 }, { 5, 5 }, { 6, 6 } };
 
@@ -55,6 +57,6 @@ namespace Schedule.Constants
             new Building { id = 2, Name = "ул. Молодогвардейская, 196" },
             new Building { id = 3, Name = "ул. Ярмарочная, 17" },
             new Building { id = 0, Name = "Прочие" }
-        };        
+        };                
     }
 }

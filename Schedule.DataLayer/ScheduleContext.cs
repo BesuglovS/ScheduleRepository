@@ -3,13 +3,14 @@ using System.Data.SqlClient;
 using Schedule.DomainClasses.Config;
 using Schedule.DomainClasses.Main;
 using Schedule.DomainClasses.Logs;
+using Schedule.DomainClasses.Session;
 
 namespace Schedule.DataLayer
 {
     public class ScheduleContext : DbContext
     {
         public ScheduleContext()
-            : base()
+            : base("data source=tcp:uch-otd-disp,1433;Database=ScheduleDB;User ID = sa;Password = ghjuhfvvf;multipleactiveresultsets=True")
         {
         }
 
@@ -32,6 +33,7 @@ namespace Schedule.DataLayer
 
         public DbSet<AuditoriumEvent> AuditoriumEvents { get; set; }
 
+        // Faculties
         public DbSet<Faculty> Faculties { get; set; }
         public DbSet<GroupsInFaculty> GroupsInFaculties { get; set; }
 
@@ -42,5 +44,9 @@ namespace Schedule.DataLayer
 
         // Options
         public DbSet<ConfigOption> Config { get; set; }
+
+        // Session
+        public DbSet<Exam> Exams { get; set; }
+        public DbSet<LogEvent> EventLog { get; set; }
     }
 }
