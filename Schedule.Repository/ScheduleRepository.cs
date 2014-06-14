@@ -2879,14 +2879,14 @@ namespace Schedule.Repositories
             }
         }
 
-        public List<Auditorium> GetFreeAuditoriumAtDOWTime(List<int> calendars, Ring ring)
+        public List<Auditorium> GetFreeAuditoriumAtDOWTime(List<int> calendars, List<int> ringIds)
         {
             using (var context = new ScheduleContext(ConnectionString))
             {
                 var occupiedAudIds = context.Lessons
                     .Where(l =>
                         ((calendars.Contains(l.Calendar.CalendarId)) &&
-                         (l.Ring.RingId == ring.RingId)) &&
+                         (ringIds.Contains(l.Ring.RingId))) &&
                          l.IsActive)
                      .Select(l => l.Auditorium.AuditoriumId)
                      .Distinct()
