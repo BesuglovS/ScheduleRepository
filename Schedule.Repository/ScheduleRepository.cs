@@ -87,7 +87,7 @@ namespace Schedule.Repositories
         }
 
         public void RestoreDB(string DBName, string filename)
-        {   
+        {
             ExecuteQuery("use master; RESTORE DATABASE " + DBName + " FROM DISK = '" + filename + "' WITH REPLACE");
         }
 
@@ -1307,8 +1307,7 @@ namespace Schedule.Repositories
                     foreach (var lessonGroup in dateTimeLessons.Groups)
                     {
                         var weekList = lessonGroup.Lessons
-                            .Select(lesson => lesson.Calendar.Date.Date - semesterStarts.Date)
-                            .Select(diff => (diff.Days / 7) + 1)
+                            .Select(lesson => CalculateWeekNumber(lesson.Calendar.Date.Date))
                             .ToList();
 
                         var weekString = CombineWeeks(weekList);
@@ -1399,7 +1398,7 @@ namespace Schedule.Repositories
                         foreach (var lessonGroup in dateTimeLessons.Groups)
                         {
                             var weekList = lessonGroup.Lessons
-                                .Select(lesson => (lesson.Calendar.Date.Date - GetSemesterStarts().Date).Days / 7 + 1)
+                                .Select(lesson => CalculateWeekNumber(lesson.Calendar.Date.Date))
                                 .ToList();
 
                             var weekString = CombineWeeks(weekList);
@@ -1732,6 +1731,12 @@ namespace Schedule.Repositories
                 curFaculty.Name = faculty.Name;
                 curFaculty.Letter = faculty.Letter;
                 curFaculty.SortingOrder = faculty.SortingOrder;
+
+                curFaculty.DeanSigningSchedule = faculty.DeanSigningSchedule;
+                curFaculty.ScheduleSigningTitle = faculty.ScheduleSigningTitle;
+
+                curFaculty.DeanSigningSessionSchedule = faculty.DeanSigningSessionSchedule;
+                curFaculty.SessionSigningTitle = faculty.SessionSigningTitle;
 
                 context.SaveChanges();
             }
@@ -2857,7 +2862,9 @@ namespace Schedule.Repositories
                 }
 
                 var semesterStarts = DateTime.ParseExact(semesterStartsOption.Value, "yyyy-MM-dd", CultureInfo.InvariantCulture);
-                return semesterStarts.AddDays((week - 1) * 7 + dow - 1);
+                var ssDOW = (semesterStarts.DayOfWeek != DayOfWeek.Sunday) ? (int)semesterStarts.DayOfWeek : 7;
+
+                return semesterStarts.AddDays((-1) * (ssDOW - 1) + (week - 1) * 7 + dow - 1);
             }
         }
 
@@ -2900,15 +2907,18 @@ namespace Schedule.Repositories
 
         public int CalculateWeekNumber(DateTime dateTime)
         {
-            return (dateTime - GetSemesterStarts()).Days / 7 + 1;
+            var semesterStarts = GetSemesterStarts();
+            var ssDOW = (semesterStarts.DayOfWeek != DayOfWeek.Sunday) ? (int)semesterStarts.DayOfWeek : 7;
+
+            var ssWeeksMonday = semesterStarts.AddDays((-1) * (ssDOW - 1));
+
+            return (dateTime - ssWeeksMonday).Days / 7 + 1;
         }
 
         public Dictionary<int, Dictionary<string, Dictionary<int, Tuple<string, List<Lesson>>>>> GetGroupedGroupsLessons(List<int> groupListIds)
         {
             using (var context = new ScheduleContext(ConnectionString))
             {
-                var semesterStarts = GetSemesterStarts();
-
                 // Понедельник 08:00 - {tfdId - {weeks + List<Lesson>}}
                 var result = new Dictionary<int, Dictionary<string, Dictionary<int, Tuple<string, List<Lesson>>>>>();
 
@@ -2963,8 +2973,7 @@ namespace Schedule.Repositories
                         foreach (var lessonGroup in dateTimeLessons.Groups)
                         {
                             var weekList = lessonGroup.Lessons
-                                .Select(lesson => lesson.Calendar.Date.Date - semesterStarts.Date)
-                                .Select(diff => (diff.Days / 7) + 1)
+                                .Select(lesson => CalculateWeekNumber(lesson.Calendar.Date.Date))
                                 .ToList();
 
                             var weekString = CombineWeeks(weekList);
