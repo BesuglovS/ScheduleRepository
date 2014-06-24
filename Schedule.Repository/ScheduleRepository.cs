@@ -24,7 +24,7 @@ namespace Schedule.Repositories
         #region Global
         public ScheduleRepository(string connectionString)
         {
-            //Database.SetInitializer(new MigrateDatabaseToLatestVersion<ScheduleContext, Configuration>());
+            Database.SetInitializer(new MigrateDatabaseToLatestVersion<ScheduleContext, Configuration>());
 
             ConnectionString = connectionString;
         }
@@ -34,15 +34,15 @@ namespace Schedule.Repositories
             ConnectionString = connectionString;
         }
 
-        public void CreateDB()
-        {
+        public static void CreateDB(string ConnectionString)
+        {            
             using (var context = new ScheduleContext(ConnectionString))
             {
-                if (!context.Database.Exists())
-                {
-                    ((IObjectContextAdapter)context).ObjectContext.CreateDatabase();
-                }
+                Database.SetInitializer(new CreateDatabaseIfNotExists<ScheduleContext>());
+                context.Database.Initialize(true);
             }
+
+            Database.SetInitializer(new MigrateDatabaseToLatestVersion<ScheduleContext, Configuration>());
         }
 
         public void RecreateDB()
@@ -134,6 +134,18 @@ namespace Schedule.Repositories
         }
         #endregion
 
+        #region CommonRepoFunctions
+        /*
+        private T GetItem<T>(Func<ScheduleContext, DbSet<T>> selector, int itemId)
+        {
+            using (var context = new ScheduleContext(ConnectionString))
+            {
+                return default(T);// selector(context).FirstOrDefault();
+            }
+            
+        }*/
+        #endregion
+
         #region AuditoriumRepository
         public List<Auditorium> GetAllAuditoriums()
         {
@@ -175,7 +187,7 @@ namespace Schedule.Repositories
             }
         }
 
-        public void AddAuditorium(Auditorium aud)
+        public Auditorium AddAuditorium(Auditorium aud)
         {
             using (var context = new ScheduleContext(ConnectionString))
             {
@@ -183,6 +195,8 @@ namespace Schedule.Repositories
 
                 context.Auditoriums.Add(aud);
                 context.SaveChanges();
+
+                return aud;
             }
         }
 
@@ -265,7 +279,7 @@ namespace Schedule.Repositories
             }
         }
 
-        public void AddCalendar(Calendar calendar)
+        public Calendar AddCalendar(Calendar calendar)
         {
             using (var context = new ScheduleContext(ConnectionString))
             {
@@ -273,6 +287,8 @@ namespace Schedule.Repositories
 
                 context.Calendars.Add(calendar);
                 context.SaveChanges();
+
+                return calendar;
             }
         }
 
@@ -355,7 +371,7 @@ namespace Schedule.Repositories
             }
         }
 
-        public void AddRing(Ring ring)
+        public Ring AddRing(Ring ring)
         {
             using (var context = new ScheduleContext(ConnectionString))
             {
@@ -363,6 +379,8 @@ namespace Schedule.Repositories
 
                 context.Rings.Add(ring);
                 context.SaveChanges();
+
+                return ring;
             }
         }
 
@@ -467,7 +485,7 @@ namespace Schedule.Repositories
             }
         }
 
-        public void AddStudent(Student student)
+        public Student AddStudent(Student student)
         {
             using (var context = new ScheduleContext(ConnectionString))
             {
@@ -475,6 +493,8 @@ namespace Schedule.Repositories
 
                 context.Students.Add(student);
                 context.SaveChanges();
+
+                return student;
             }
         }
 
@@ -569,7 +589,7 @@ namespace Schedule.Repositories
             }
         }
 
-        public void AddStudentGroup(StudentGroup studentGroup)
+        public StudentGroup AddStudentGroup(StudentGroup studentGroup)
         {
             using (var context = new ScheduleContext(ConnectionString))
             {
@@ -577,6 +597,8 @@ namespace Schedule.Repositories
 
                 context.StudentGroups.Add(studentGroup);
                 context.SaveChanges();
+
+                return studentGroup;
             }
         }
 
@@ -659,7 +681,7 @@ namespace Schedule.Repositories
             }
         }
 
-        public void AddTeacher(Teacher teacher)
+        public Teacher AddTeacher(Teacher teacher)
         {
             using (var context = new ScheduleContext(ConnectionString))
             {
@@ -667,6 +689,8 @@ namespace Schedule.Repositories
 
                 context.Teachers.Add(teacher);
                 context.SaveChanges();
+
+                return teacher;
             }
         }
 
@@ -730,7 +754,11 @@ namespace Schedule.Repositories
         {
             using (var context = new ScheduleContext(ConnectionString))
             {
-                return context.TeacherForDiscipline.Where(tfd => tfd.Teacher.TeacherId == teacher.TeacherId).Select(tefd => tefd.Discipline).Include(d => d.StudentGroup).ToList();
+                return context.TeacherForDiscipline
+                    .Where(tfd => tfd.Teacher.TeacherId == teacher.TeacherId)
+                    .Select(tefd => tefd.Discipline)
+                    .Include(d => d.StudentGroup)
+                    .ToList();
             }
         }
 
@@ -750,12 +778,13 @@ namespace Schedule.Repositories
             }
         }
 
-        public Discipline FindDiscipline(string name, int attestation, int auditoriumHours, int lectureHours, int practicalHours, string groupName)
+        public Discipline FindDiscipline(string name, int semester, int attestation, int auditoriumHours, int lectureHours, int practicalHours, string groupName)
         {
             using (var context = new ScheduleContext(ConnectionString))
             {
                 return context.Disciplines.Include(d => d.StudentGroup).FirstOrDefault(
                     d => d.Name == name &&
+                         d.Semester == semester &&
                          d.Attestation == attestation &&
                          d.AuditoriumHours == auditoriumHours &&
                          d.LectureHours == lectureHours &&
@@ -764,7 +793,7 @@ namespace Schedule.Repositories
             }
         }
 
-        public void AddDiscipline(Discipline discipline)
+        public Discipline AddDiscipline(Discipline discipline)
         {
             using (var context = new ScheduleContext(ConnectionString))
             {
@@ -772,6 +801,8 @@ namespace Schedule.Repositories
                 context.Disciplines.Add(discipline);
 
                 context.SaveChanges();
+
+                return discipline;
             }
         }
 
@@ -786,6 +817,7 @@ namespace Schedule.Repositories
                 curDiscipline.LectureHours = discipline.LectureHours;
                 curDiscipline.Name = discipline.Name;
                 curDiscipline.PracticalHours = discipline.PracticalHours;
+                curDiscipline.Semester = discipline.Semester;
                 var disciplineGroup = context.StudentGroups.FirstOrDefault(sg => sg.StudentGroupId == discipline.StudentGroup.StudentGroupId);
                 curDiscipline.StudentGroup = disciplineGroup;
 
@@ -873,7 +905,7 @@ namespace Schedule.Repositories
             }
         }
 
-        public void AddStudentsInGroups(StudentsInGroups studentsInGroups)
+        public StudentsInGroups AddStudentsInGroups(StudentsInGroups studentsInGroups)
         {
             using (var context = new ScheduleContext(ConnectionString))
             {
@@ -884,6 +916,8 @@ namespace Schedule.Repositories
 
                 context.StudentsInGroups.Add(studentsInGroups);
                 context.SaveChanges();
+
+                return studentsInGroups;
             }
         }
 
@@ -983,7 +1017,7 @@ namespace Schedule.Repositories
             }
         }
 
-        public void AddTeacherForDiscipline(TeacherForDiscipline teacherForDiscipline)
+        public TeacherForDiscipline AddTeacherForDiscipline(TeacherForDiscipline teacherForDiscipline)
         {
             using (var context = new ScheduleContext(ConnectionString))
             {
@@ -994,6 +1028,8 @@ namespace Schedule.Repositories
 
                 context.TeacherForDiscipline.Add(teacherForDiscipline);
                 context.SaveChanges();
+
+                return teacherForDiscipline;
             }
         }
 
@@ -1105,7 +1141,7 @@ namespace Schedule.Repositories
             }
         }
 
-        public void AddLessonWOLog(Lesson lesson)
+        public Lesson AddLessonWOLog(Lesson lesson)
         {
             using (var context = new ScheduleContext(ConnectionString))
             {
@@ -1119,10 +1155,12 @@ namespace Schedule.Repositories
                 context.Lessons.Add(lesson);
 
                 context.SaveChanges();
+
+                return lesson;
             }
         }
 
-        public void AddLesson(Lesson lesson, string publicComment = "", string hiddenComment = "")
+        public Lesson AddLesson(Lesson lesson, string publicComment = "", string hiddenComment = "")
         {
             using (var context = new ScheduleContext(ConnectionString))
             {
@@ -1146,6 +1184,8 @@ namespace Schedule.Repositories
                     }
                 );
                 context.SaveChanges();
+
+                return lesson;
             }
         }
 
@@ -1247,7 +1287,7 @@ namespace Schedule.Repositories
             }
         }
 
-        public Dictionary<string, Dictionary<int, Tuple<string, List<Lesson>>>> GetGroupedGroupLessons(int groupId, DateTime semesterStarts, int weekfilter = -1)
+        public Dictionary<string, Dictionary<int, Tuple<string, List<Lesson>>>> GetGroupedGroupLessons(int groupId, int semester, int weekfilter = -1)
         {
             using (var context = new ScheduleContext(ConnectionString))
             {
@@ -1261,7 +1301,9 @@ namespace Schedule.Repositories
                 var groupsListIds = context.StudentsInGroups
                     .Where(sig => studentIds.Contains(sig.Student.StudentId))
                     .ToList()
-                    .Select(stig => stig.StudentGroup.StudentGroupId);
+                    .Select(stig => stig.StudentGroup.StudentGroupId)
+                    .Distinct()
+                    .ToList();
 
                 var primaryList = context.Lessons
                     .Include(l => l.TeacherForDiscipline.Teacher)
@@ -1269,13 +1311,15 @@ namespace Schedule.Repositories
                     .Include(l => l.Calendar)
                     .Include(l => l.Ring)
                     .Include(l => l.Auditorium)
-                    .Where(l => groupsListIds.Contains(l.TeacherForDiscipline.Discipline.StudentGroup.StudentGroupId) && l.IsActive)
+                    .Where(l => groupsListIds.Contains(l.TeacherForDiscipline.Discipline.StudentGroup.StudentGroupId) && 
+                                l.IsActive &&
+                                l.TeacherForDiscipline.Discipline.Semester == semester)
                     .ToList();
 
                 if (weekfilter != -1)
                 {
                     primaryList = primaryList
-                        .Where(l => CalculateWeekNumber(l.Calendar.Date) == weekfilter)
+                        .Where(l => CalculateWeekNumber(l.Calendar.Date, semester) == weekfilter)
                         .ToList();
                 }
 
@@ -1307,7 +1351,7 @@ namespace Schedule.Repositories
                     foreach (var lessonGroup in dateTimeLessons.Groups)
                     {
                         var weekList = lessonGroup.Lessons
-                            .Select(lesson => CalculateWeekNumber(lesson.Calendar.Date.Date))
+                            .Select(lesson => CalculateWeekNumber(lesson.Calendar.Date.Date, semester))
                             .ToList();
 
                         var weekString = CombineWeeks(weekList);
@@ -1326,7 +1370,7 @@ namespace Schedule.Repositories
         }
 
         public Dictionary<int, Dictionary<string, Dictionary<int, Tuple<string, List<Lesson>>>>>
-            GetFacultyDOWSchedule(int facultyId, int dowRU)
+            GetFacultyDOWSchedule(int facultyId, int dowRU, int semester)
         {
             using (var context = new ScheduleContext(ConnectionString))
             {
@@ -1398,7 +1442,7 @@ namespace Schedule.Repositories
                         foreach (var lessonGroup in dateTimeLessons.Groups)
                         {
                             var weekList = lessonGroup.Lessons
-                                .Select(lesson => CalculateWeekNumber(lesson.Calendar.Date.Date))
+                                .Select(lesson => CalculateWeekNumber(lesson.Calendar.Date.Date, semester))
                                 .ToList();
 
                             var weekString = CombineWeeks(weekList);
@@ -1498,16 +1542,18 @@ namespace Schedule.Repositories
             }
         }
 
-        public void AddLessonLogEvent(LessonLogEvent lessonLogEvent)
+        public LessonLogEvent AddLessonLogEvent(LessonLogEvent lessonLogEvent)
         {
             using (var context = new ScheduleContext(ConnectionString))
             {
                 lessonLogEvent.LessonLogEventId = 0;
-                lessonLogEvent.OldLesson = context.Lessons.FirstOrDefault(l => l.LessonId == lessonLogEvent.OldLesson.LessonId);
-                lessonLogEvent.NewLesson = context.Lessons.FirstOrDefault(l => l.LessonId == lessonLogEvent.NewLesson.LessonId);
+                lessonLogEvent.OldLesson = (lessonLogEvent.OldLesson == null) ? null : context.Lessons.FirstOrDefault(l => l.LessonId == lessonLogEvent.OldLesson.LessonId);
+                lessonLogEvent.NewLesson = (lessonLogEvent.NewLesson == null) ? null : context.Lessons.FirstOrDefault(l => l.LessonId == lessonLogEvent.NewLesson.LessonId);
 
                 context.LessonLog.Add(lessonLogEvent);
                 context.SaveChanges();
+
+                return lessonLogEvent;
             }
         }
 
@@ -1559,15 +1605,15 @@ namespace Schedule.Repositories
 
         #region ConfigOptionRepository
 
-        public DateTime GetSemesterStarts()
+        public DateTime GetSemesterStarts(int semester)
         {
             using (var context = new ScheduleContext(ConnectionString))
             {
                 var semesterStartsOption = context.Config
-                    .FirstOrDefault(co => co.Key == "Semester Starts");
+                    .FirstOrDefault(co => co.Key == "Semester Starts " + semester.ToString());
                 if (semesterStartsOption == null)
                 {
-                    return new DateTime(2000, 1, 1);
+                    throw new ArgumentException("В опциях нет начала семестра № " + semester);
                 }
 
                 return DateTime.ParseExact(semesterStartsOption.Value, "yyyy-MM-dd", CultureInfo.InvariantCulture);
@@ -1614,12 +1660,14 @@ namespace Schedule.Repositories
             }
         }
 
-        public void AddConfigOption(ConfigOption co)
+        public ConfigOption AddConfigOption(ConfigOption co)
         {
             using (var context = new ScheduleContext(ConnectionString))
             {
                 context.Config.Add(co);
                 context.SaveChanges();
+
+                return co;
             }
         }
 
@@ -1711,7 +1759,7 @@ namespace Schedule.Repositories
             }
         }
 
-        public void AddFaculty(Faculty faculty)
+        public Faculty AddFaculty(Faculty faculty)
         {
             using (var context = new ScheduleContext(ConnectionString))
             {
@@ -1719,6 +1767,8 @@ namespace Schedule.Repositories
 
                 context.Faculties.Add(faculty);
                 context.SaveChanges();
+
+                return faculty;
             }
         }
 
@@ -1828,7 +1878,7 @@ namespace Schedule.Repositories
             }
         }
 
-        public void AddAuditoriumEvent(AuditoriumEvent ae)
+        public AuditoriumEvent AddAuditoriumEvent(AuditoriumEvent ae)
         {
             using (var context = new ScheduleContext(ConnectionString))
             {
@@ -1840,6 +1890,8 @@ namespace Schedule.Repositories
 
                 context.AuditoriumEvents.Add(ae);
                 context.SaveChanges();
+
+                return ae;
             }
         }
 
@@ -1958,7 +2010,7 @@ namespace Schedule.Repositories
             }
         }
 
-        public void AddGroupsInFaculty(GroupsInFaculty groupsInFaculty)
+        public GroupsInFaculty AddGroupsInFaculty(GroupsInFaculty groupsInFaculty)
         {
             using (var context = new ScheduleContext(ConnectionString))
             {
@@ -1969,6 +2021,8 @@ namespace Schedule.Repositories
 
                 context.GroupsInFaculties.Add(groupsInFaculty);
                 context.SaveChanges();
+
+                return groupsInFaculty;
             }
         }
 
@@ -2079,7 +2133,7 @@ namespace Schedule.Repositories
             }
         }
 
-        public void AddScheduleNote(ScheduleNote sNote)
+        public ScheduleNote AddScheduleNote(ScheduleNote sNote)
         {
             using (var context = new ScheduleContext(ConnectionString))
             {
@@ -2092,6 +2146,8 @@ namespace Schedule.Repositories
 
                 context.ScheduleNotes.Add(sNote);
                 context.SaveChanges();
+
+                return sNote;
             }
         }
 
@@ -2162,30 +2218,6 @@ namespace Schedule.Repositories
             }
         }
 
-        private void RemoveLogEvent(int logEventId)
-        {
-            using (var context = new ScheduleContext(ConnectionString))
-            {
-                var logEvent = context.EventLog.FirstOrDefault(le => le.LogEventId == logEventId);
-
-                context.EventLog.Remove(logEvent);
-                context.SaveChanges();
-            }
-        }
-
-        private LogEvent GetLogEvent(int logEventId)
-        {
-            using (var context = new ScheduleContext(ConnectionString))
-            {
-                return context
-                    .EventLog
-                    .Include(e => e.OldExam)
-                    .Include(e => e.NewExam)
-                    .FirstOrDefault(le => le.LogEventId == logEventId);
-            }
-        }
-
-
         public int GetTotalExamsCount()
         {
             using (var context = new ScheduleContext(ConnectionString))
@@ -2241,7 +2273,7 @@ namespace Schedule.Repositories
             }
         }
 
-        public void AddExam(Exam exam)
+        public Exam AddExam(Exam exam)
         {
             using (var context = new ScheduleContext(ConnectionString))
             {
@@ -2249,6 +2281,8 @@ namespace Schedule.Repositories
 
                 context.Exams.Add(exam);
                 context.SaveChanges();
+
+                return exam;
             }
         }
 
@@ -2387,6 +2421,81 @@ namespace Schedule.Repositories
                     .Include(e => e.OldExam)
                     .Include(e => e.NewExam)
                     .ToList();
+            }
+        }
+
+        public List<LogEvent> GetFilteredLogEvents(Func<LogEvent, bool> condition)
+        {
+            using (var context = new ScheduleContext(ConnectionString))
+            {
+                return context.EventLog
+                    .Include(e => e.OldExam)
+                    .Include(e => e.NewExam)
+                    .ToList()
+                    .Where(condition)
+                    .ToList();
+            }
+        }
+
+        public LogEvent GetFirstFilteredLogEvents(Func<LogEvent, bool> condition)
+        {
+            using (var context = new ScheduleContext(ConnectionString))
+            {
+                return context.EventLog
+                    .Include(e => e.OldExam)
+                    .Include(e => e.NewExam)
+                    .ToList()
+                    .FirstOrDefault(condition);
+            }
+        }
+
+        public LogEvent GetLogEvent(int LogEventId)
+        {
+            using (var context = new ScheduleContext(ConnectionString))
+            {
+                return context.EventLog
+                    .Include(e => e.OldExam)
+                    .Include(e => e.NewExam)
+                    .FirstOrDefault(e => e.LogEventId == LogEventId);
+            }
+        }
+
+        public LogEvent AddLogEvent(LogEvent logEvent)
+        {
+            using (var context = new ScheduleContext(ConnectionString))
+            {
+                logEvent.OldExam = context.Exams.FirstOrDefault(e => e.ExamId == logEvent.OldExam.ExamId);
+                logEvent.NewExam = context.Exams.FirstOrDefault(e => e.ExamId == logEvent.NewExam.ExamId);
+
+                context.EventLog.Add(logEvent);
+                context.SaveChanges();
+
+                return logEvent;
+            }
+        }
+
+        public void UpdateLogEvent(LogEvent logEvent)
+        {
+            using (var context = new ScheduleContext(ConnectionString))
+            {
+                var curLogEvent = context.EventLog.FirstOrDefault(le => le.LogEventId == logEvent.LogEventId);
+
+                curLogEvent.DateTime = logEvent.DateTime;
+                curLogEvent.OldExam = context.Exams.FirstOrDefault(e => e.ExamId == logEvent.OldExam.ExamId);
+                curLogEvent.NewExam = context.Exams.FirstOrDefault(e => e.ExamId == logEvent.NewExam.ExamId);                
+
+                context.SaveChanges();
+            }
+        }
+
+        public void RemoveLogEvent(int LogEventId)
+        {
+            using (var context = new ScheduleContext(ConnectionString))
+            {
+                var logEvent = context.EventLog.FirstOrDefault(le => le.LogEventId == LogEventId);
+
+                context.EventLog.Remove(logEvent);
+                context.SaveChanges();
             }
         }
 
@@ -2905,9 +3014,9 @@ namespace Schedule.Repositories
             }
         }
 
-        public int CalculateWeekNumber(DateTime dateTime)
+        public int CalculateWeekNumber(DateTime dateTime, int semester)
         {
-            var semesterStarts = GetSemesterStarts();
+            var semesterStarts = GetSemesterStarts(semester);
             var ssDOW = (semesterStarts.DayOfWeek != DayOfWeek.Sunday) ? (int)semesterStarts.DayOfWeek : 7;
 
             var ssWeeksMonday = semesterStarts.AddDays((-1) * (ssDOW - 1));
@@ -2915,7 +3024,7 @@ namespace Schedule.Repositories
             return (dateTime - ssWeeksMonday).Days / 7 + 1;
         }
 
-        public Dictionary<int, Dictionary<string, Dictionary<int, Tuple<string, List<Lesson>>>>> GetGroupedGroupsLessons(List<int> groupListIds)
+        public Dictionary<int, Dictionary<string, Dictionary<int, Tuple<string, List<Lesson>>>>> GetGroupedGroupsLessons(List<int> groupListIds, int semester)
         {
             using (var context = new ScheduleContext(ConnectionString))
             {
@@ -2973,7 +3082,7 @@ namespace Schedule.Repositories
                         foreach (var lessonGroup in dateTimeLessons.Groups)
                         {
                             var weekList = lessonGroup.Lessons
-                                .Select(lesson => CalculateWeekNumber(lesson.Calendar.Date.Date))
+                                .Select(lesson => CalculateWeekNumber(lesson.Calendar.Date.Date, semester))
                                 .ToList();
 
                             var weekString = CombineWeeks(weekList);
@@ -3009,7 +3118,7 @@ namespace Schedule.Repositories
 
         // data   - Dictionary<RingId, Dictionary <AuditoriumId, List<Dictionary<tfd, List<Lesson>>>>>
         // result - Dictionary<RingId, Dictionary <AuditoriumId, List<tfd/Event-string>>>
-        public Dictionary<int, Dictionary<int, List<string>>> getDOWAuds(DayOfWeek dow, int weekNumber, int buildingNumber)
+        public Dictionary<int, Dictionary<int, List<string>>> getDOWAuds(DayOfWeek dow, int weekNumber, int buildingNumber, int semester)
         {
             var data = new Dictionary<int, Dictionary<int, Dictionary<int, List<Lesson>>>>();
 
@@ -3032,7 +3141,7 @@ namespace Schedule.Repositories
                     dowLessons = GetFiltredLessons(l =>
                             l.Calendar.Date.DayOfWeek == dow &&
                             l.IsActive &&
-                            CalculateWeekNumber(l.Calendar.Date) == weekNumber)
+                            CalculateWeekNumber(l.Calendar.Date, semester) == weekNumber)
                         .ToList();
                 }
                 else
@@ -3040,7 +3149,7 @@ namespace Schedule.Repositories
                     dowLessons = GetFiltredLessons(l =>
                             l.Calendar.Date.DayOfWeek == dow &&
                             l.IsActive &&
-                            CalculateWeekNumber(l.Calendar.Date) == weekNumber &&
+                            CalculateWeekNumber(l.Calendar.Date, semester) == weekNumber &&
                             AuditoriumBuilding(l.Auditorium.Name) == buildingNumber)
                         .ToList();
                 }
@@ -3085,7 +3194,7 @@ namespace Schedule.Repositories
                     foreach (var tfd in aud.Value)
                     {
                         result[ring.Key][aud.Key].Add(tfd.Value[0].TeacherForDiscipline.Discipline.StudentGroup.Name + Environment.NewLine +
-                            "(" + GetWeekStringFromLessons(tfd.Value) + ")@" +
+                            "(" + GetWeekStringFromLessons(tfd.Value, semester) + ")@" +
                             tfd.Value[0].TeacherForDiscipline.Teacher.FIO + "@" + tfd.Value[0].TeacherForDiscipline.Discipline.Name);
                     }
                 }
@@ -3109,13 +3218,13 @@ namespace Schedule.Repositories
                 {
                     audEvents = GetFiltredAuditoriumEvents(evt =>
                         evt.Calendar.Date.DayOfWeek == dow &&
-                        CalculateWeekNumber(evt.Calendar.Date) == weekNumber);
+                        CalculateWeekNumber(evt.Calendar.Date, semester) == weekNumber);
                 }
                 else
                 {
                     audEvents = GetFiltredAuditoriumEvents(evt =>
                         evt.Calendar.Date.DayOfWeek == dow &&
-                        CalculateWeekNumber(evt.Calendar.Date) == weekNumber &&
+                        CalculateWeekNumber(evt.Calendar.Date, semester) == weekNumber &&
                         AuditoriumBuilding(evt.Auditorium.Name) == buildingNumber);
                 }
             }
@@ -3177,11 +3286,11 @@ namespace Schedule.Repositories
                         {
                             var evtName = eventPair.Value[0].Name.Split('@')[0];
                             var evtHint = eventPair.Value[0].Name.Substring(evtName.Length + 1);
-                            result[ring.Key][aud.Key].Add(evtName + Environment.NewLine + "( " + GetWeekStringFromEvents(eventPair.Value) + " )@" + evtHint);
+                            result[ring.Key][aud.Key].Add(evtName + Environment.NewLine + "( " + GetWeekStringFromEvents(eventPair.Value, semester) + " )@" + evtHint);
                         }
                         else
                         {
-                            result[ring.Key][aud.Key].Add(eventPair.Value[0].Name + Environment.NewLine + "( " + GetWeekStringFromEvents(eventPair.Value) + " )");
+                            result[ring.Key][aud.Key].Add(eventPair.Value[0].Name + Environment.NewLine + "( " + GetWeekStringFromEvents(eventPair.Value, semester) + " )");
                         }
                     }
                 }
@@ -3194,7 +3303,7 @@ namespace Schedule.Repositories
 
         // data   - Dictionary<RingId, Dictionary <dow, List<Dictionary<tfd, List<Lesson>>>>>
         // result - Dictionary<RingId, Dictionary <dow, List<tfd/Event-string>>>
-        public Dictionary<int, Dictionary<int, List<string>>> getAud(int auditoriumId)
+        public Dictionary<int, Dictionary<int, List<string>>> getAud(int auditoriumId, int semester)
         {
             var data = new Dictionary<int, Dictionary<int, Dictionary<int, List<Lesson>>>>();
 
@@ -3240,7 +3349,7 @@ namespace Schedule.Repositories
                     foreach (var tfd in dow.Value)
                     {
                         result[ring.Key][dow.Key].Add(tfd.Value[0].TeacherForDiscipline.Discipline.StudentGroup.Name + Environment.NewLine +
-                            "(" + GetWeekStringFromLessons(tfd.Value) + ")@" +
+                            "(" + GetWeekStringFromLessons(tfd.Value, semester) + ")@" +
                             tfd.Value[0].TeacherForDiscipline.Teacher.FIO + "@" + tfd.Value[0].TeacherForDiscipline.Discipline.Name);
                     }
                 }
@@ -3248,8 +3357,8 @@ namespace Schedule.Repositories
 
             // Непонятно почему, но следующая строчка без этого не работает
             // Аудитории или даты в event'е получаются == null
-            var pick = this.GetAllAuditoriums();
-            var pick2 = this.GetAllCalendars();
+            //var pick = this.GetAllAuditoriums();
+            //var pick2 = this.GetAllCalendars();
 
             var dowEvents = GetFiltredAuditoriumEvents(evt => evt.Auditorium.AuditoriumId == auditoriumId);
 
@@ -3310,11 +3419,11 @@ namespace Schedule.Repositories
                         {
                             var evtName = eventPair.Value[0].Name.Split('@')[0];
                             var evtHint = eventPair.Value[0].Name.Substring(evtName.Length + 1);
-                            result[ring.Key][dow.Key].Add(evtName + Environment.NewLine + "( " + GetWeekStringFromEvents(eventPair.Value) + " )@" + evtHint);
+                            result[ring.Key][dow.Key].Add(evtName + Environment.NewLine + "( " + GetWeekStringFromEvents(eventPair.Value, semester) + " )@" + evtHint);
                         }
                         else
                         {
-                            result[ring.Key][dow.Key].Add(eventPair.Value[0].Name + Environment.NewLine + "( " + GetWeekStringFromEvents(eventPair.Value) + " )");
+                            result[ring.Key][dow.Key].Add(eventPair.Value[0].Name + Environment.NewLine + "( " + GetWeekStringFromEvents(eventPair.Value, semester) + " )");
                         }
                     }
                 }
@@ -3325,13 +3434,13 @@ namespace Schedule.Repositories
             return result;
         }
 
-        public string GetWeekStringFromLessons(List<Lesson> list)
+        public string GetWeekStringFromLessons(List<Lesson> list, int semester)
         {
             var weeksList = new List<int>();
 
             foreach (var lesson in list)
             {
-                weeksList.Add(CalculateWeekNumber(lesson.Calendar.Date));
+                weeksList.Add(CalculateWeekNumber(lesson.Calendar.Date, semester));
             }
 
             string result = CombineWeeks(weeksList);
@@ -3339,13 +3448,13 @@ namespace Schedule.Repositories
             return result;
         }
 
-        public string GetWeekStringFromEvents(List<AuditoriumEvent> list)
+        public string GetWeekStringFromEvents(List<AuditoriumEvent> list, int semester)
         {
             var weeksList = new List<int>();
 
             foreach (var lesson in list)
             {
-                weeksList.Add(CalculateWeekNumber(lesson.Calendar.Date));
+                weeksList.Add(CalculateWeekNumber(lesson.Calendar.Date, semester));
             }
 
             string result = CombineWeeks(weeksList);

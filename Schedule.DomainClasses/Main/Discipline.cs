@@ -4,6 +4,7 @@
     {
         public int DisciplineId { get; set; }
         public string Name { get; set; }
+        public int Semester { get; set; }
         public int Attestation { get; set; } // 0 - ничего; 1 - зачёт; 2 - экзамен; 3 - зачёт и экзамен; 4 - зачёт с оценкой
         public int AuditoriumHours { get; set; }
         public int LectureHours { get; set; }
@@ -14,10 +15,11 @@
         {
         }
 
-        public Discipline(string name, StudentGroup studentGroup,
+        public Discipline(string name, int semester, StudentGroup studentGroup,
             int attestation, int auditoriumHours, int lectureHours, int practicalHours)
         {
             Name = name;
+            Semester = semester;
             StudentGroup = studentGroup;
             Attestation = attestation;
             AuditoriumHours = auditoriumHours;
